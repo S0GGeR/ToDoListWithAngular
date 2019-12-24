@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html xmlns="">
+
+	<script src="https://kit.fontawesome.com/308157eadb.js" crossorigin="anonymous"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular.min.js"></script>
+	<title>TODO List</title>
+	<meta charset="UTF-8">
+	<script src="https://code.jquery.com/jquery-3.4.1.js"></script>
+	<link href="https://fonts.googleapis.com/css?family=Hind&display=swap" rel="stylesheet">
+	<link rel="stylesheet" type="text/css" href="style.css">
+	<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.11.2/css/all.css" integrity="sha384-KA6wR/X5RY4zFAHpv/CnoG2UW1uogYfdnP67Uv7eULvTveboZJg0qUpmJZb5VqzN" crossorigin="anonymous">
+
+</head>
+	<body ng-app="myApp" ng-controller="myCtrl">
+
+	<h1><span class="styling">TODO</span>List</h1>
+
+	<div class="input_div">
+
+		<input id= "input"class="input" type="text" ng-model="value" placeholder="Новые задачи, сэр?">
+		<button id = "addButton" ng-click="addItems(value)"  class="addButton"> <i class="fas fa-plus "></i></button>
+
+
+	</div>
+	<div class="container" >
+	 <div class = "item" ng-repeat="i in items " id = {{i[0]}} >
+			<input  type="text"  class="item_input" ng-model = "i[1]" ng-disabled="i[2]" disabled>
+			<button class = "editButton" ng-click="editItems(i[0])"	 >Редактировать</button>
+			<button class = "removeButton" ng-click="removeItems(i[0])">Удалить</button>
+		</div>
+	</div>
+
+	<script>
+		var app = angular.module('myApp', []);
+
+		app.controller('myCtrl', function($scope, $http, $interval) {
+
+			$scope.getItems = function () {
+				if ($scope.items !== undefined) {
+					if (FindItem($scope.items, false, 2) !== false){
+						return false;
+					}
+				}
+				$http({
+						method: "GET",
+						url: "main.js?ShowItems"
+					}).then(function mySuccess(items) {
+						if (items.data === undefined)
+							return false;
+						else {
+							$scope.items = [];
+							let allID = (Object.keys(items.data));
+							for (let i = allID[0]; i <= allID[allID.length - 1]; ++i) {
+								if (items.data[i] !== undefined) {
+									let item = (Object.values(items.data[i]));
+									item.push(true);
+									$scope.items.push(item);
+								}
+							}
+						}
+
+					}, function myError(response) {
+						console.log(response);
+					});
+
+
+			};
+			$scope.addItems = function (text){
+
+				$http({
+					method: "POST",
+					url: 'main.js',
+					data: {addItem:text},
+
+				}).then(function mySuccess(response) {
+					let newItem = [response['data'][0]['id'], response['data'][0]['text'], true];
+					$scope.items.push(newItem);
+					$scope.value = '';
+				}, function myError(response) {
+					console.log(response);
+				});
+
+			};
+			$scope.removeItems = function (id){
+				let number =  FindItem($scope.items, id, 0);
+				$http({
+					method: "DELETE",
+					url: 'main.js',
+					data: {itemID:$scope.items[number][0]},
+				}).then(function mySuccess(response) {
+					$scope.items.splice(number,1);
+					}, function myError(response) {
+					console.log(response);
+				});
+
+			};
+			$scope.editItems = function (id){
+				let number =  FindItem($scope.items, id, 0);
+				$scope.items[number][2] = !$scope.items[number][2];
+				if ($scope.items[number][2]){
+					$http({
+						method : "PUT",
+						url : "main.js",
+						data: {editItem:$scope.items[number][1],itemID:$scope.items[number][0]},
+					}).then(function mySuccess(response) {
+						$scope.myWelcome = response.data;
+					}, function myError(response) {
+						$scope.myWelcome = response.statusText;
+					});
+
+				}
+			};
+
+			$scope.getItems();
+			$interval($scope.getItems, 10000);
+
+		});
+
+		let FindItem = function (arr, value, index){
+			for (let i = 0; i < arr.length; i++) {
+				if (arr[i][index] === value) {
+					return i;
+				}
+			}
+			return false;
+		}
+
+
+	</script>
+</body>
+</html>
